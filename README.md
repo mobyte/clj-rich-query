@@ -34,7 +34,7 @@ After that files src/db/entities.clj and db/recordtypes will be generated. In my
 
 entities.clj:
 
------8<-----
+```clj
 (ns db.entities)
 
 ;;;; players
@@ -59,21 +59,22 @@ entities.clj:
 (def table-recordtypes "recordtypes")
 (def recordtypes-id {:type {:size 10, :name "INT UNSIGNED"}, :table "recordtypes", :name "id"})
 (def recordtypes-name {:type {:size 255, :name "VARCHAR"}, :table "recordtypes", :name "name"})
------>8-----
+```
 
 recordtypes.clj:
 
------8<-----
+```clj
 (ns db.recordtypes)
 
 (def name-kills-per-round "kills per round")
 (def name-kills-per-game "kills per game")
 (def name-longest-undead-time "longest undead time")
------>8-----
+```
 
 
 Now we can use other clj_query functions with tables and columns autocomplete:
 
+```clj
 user> (require '[ db.recordtypes :as rectypes ])
 nil
 user> (use 'db.entities)
@@ -82,10 +83,13 @@ user> (def record (first (q/select-deep db table-records
                               :join [[table-recordtypes [:= recordtypes-id records-type_id]]] 
                               :where [:= recordtypes-name rectypes/name-kills-per-round])))
 #'user/record
+```
 
 Let's get "player" type through fk-referenced tables chain: records -> players -> playertypes
 
+```clj
 user> (q/get-field-from-row record records-player_id players-type_id playertypes-name)
 "bot"
+```
 
 So the best result of "kills per round" belongs to "bot" player.
