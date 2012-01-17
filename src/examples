@@ -1,0 +1,5 @@
+(def db {:classname "com.mysql.jdbc.Driver"
+                           :subprotocol "mysql"
+                           :subname (str "//localhost:3306/clj_query")
+                           :user "clj"
+                           :password "clj"})
