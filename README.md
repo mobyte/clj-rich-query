@@ -2,8 +2,8 @@ Features:
 
 * sql query dsl: with-db, select(-deep, -with-db), update, insert, delete.
 * access to fields of fk-referenced tables through select result (select-deep, get-field-from-row).
-* generating source files of table names, columns infos and constants from db, which allows
-  autocomplete these entities in the repl and clojre-mode in emacs.
+* generating source files of table names, columns infos and constants from db, which allows autocomplete these entities in the repl and clojre-mode in emacs.
+* java interoperability: map->object, object-to-map, table insert.
 
 Examples
 
