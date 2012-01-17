@@ -9,14 +9,17 @@ Examples
 
 We have db spec:
 
+```clj
 user> (def db {:classname "com.mysql.jdbc.Driver"
                            :subprotocol "mysql"
                            :subname (str "//localhost:3306/clj_query")
                            :user "clj"
                            :password "clj"})
+```
 
 Generating tables and columns info file and constants from "recordtypes" table
 
+```clj
 user> (require '[ libs.db.gentablecolumns :as gen ])
 nil
 user> (require '[ libs.db.gencolumnvalues :as genval ])
@@ -25,6 +28,7 @@ user> (gen/generate-table-column-names db)
 nil
 user> (genval/generate-column-value-constants db table-recordtypes (:name recordtypes-name))
 nil
+```
 
 After that files src/db/entities.clj and db/recordtypes will be generated. In my example case:
 
