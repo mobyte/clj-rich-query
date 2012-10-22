@@ -1,6 +1,7 @@
 (ns libs.db.gentablecolumns
-  (:require [clojure.java.jdbc :as jdbc])
-  (:require [clojure.contrib.duck-streams :as duck]))
+  (:require [clojure.java.jdbc :as jdbc]
+            [clojure.java.io :as io])
+  (:use libs.db.glib))
 
 (def file-name "src/db/entities.clj")
 (def table-prefix "table-")
@@ -35,24 +36,24 @@
                  (resultset-seq (.getTables meta nil nil "%" nil)))))))
 
 (defn- write-table-area [db table]
-  (duck/with-out-append-writer file-name
-    (println (str ";;;; " table))
+  (with-open [wrtr (io/writer file-name :append true)]
+    (writeln wrtr ";;;; " table)
     (let [lower-case-table-name (.toLowerCase table)
           columns (get-table-columns db table)]
-      (println (make-table-string table lower-case-table-name))
+      (writeln wrtr (make-table-string table lower-case-table-name))
       (doseq [column columns]
-        (println (make-field-string lower-case-table-name column))))
-    (println)))
+        (writeln wrtr (make-field-string lower-case-table-name column))))
+    (writeln wrtr)))
 
 (defn- write-namespace-area []
-  (duck/with-out-writer file-name
-    (println (str '(ns db.entities)))
-    (println)))
+  (with-open [wrtr (io/writer file-name)]
+    (writeln wrtr (str '(ns db.entities)))
+    (writeln wrtr)))
 
 (defn generate-table-column-names [db-spec]
   "Generates source file db/entities which contains table names and
 their columns info"
-  (duck/make-parents (java.io.File. file-name))
+  (io/make-parents (java.io.File. file-name))
   ;; namespace area
   (write-namespace-area)
   (println)
