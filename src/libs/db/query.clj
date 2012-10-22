@@ -4,36 +4,58 @@
   (:import 
    (java.sql PreparedStatement)))
 
+(defn- make-full-field-name [field]
+  (str (:table field) "." (:name field)))
+
+(defn- join-with [items sep & [trans-fn]]
+  (apply str (interpose (str sep " ") (map (or trans-fn identity) items))))
+
+(defn- join-with-comma [items & [trans-fn]]
+  (join-with items ", " trans-fn))
+
+(defn- join-with-space [items & [trans-fn]]
+  (join-with items "" trans-fn))
+
+(defn- make-constant [expr]
+  (cond (= java.lang.String (type expr)) (str "\"" expr "\"")
+        :else expr))
+
 (defn- prepare-select-filter [expr]
-  (if (vector? expr)
-    (cond (= :in (first expr)) (list (prepare-select-filter (second expr))
-                                     (symbol (name (first expr)))
-                                     (rest (reduce #(cons (symbol (str \,)) (cons %2 %1)) nil
-                                                   (map prepare-select-filter (nth expr 2)))))
-          :else (list (prepare-select-filter (second expr))
-                      (symbol (name (first expr)))
-                      (prepare-select-filter (nth expr 2))))
+  (if (vector? expr) ;; expression
+    (str "(" (case (first expr)
+               :in (join-with-space [(prepare-select-filter (second expr))
+                                     "in" "(" (join-with-comma (nth expr 2)
+                                                prepare-select-filter) ")"])
+               :not (join-with-space ["not" (prepare-select-filter (second expr))])
+               (join-with-space [(prepare-select-filter (second expr))
+                                 (name (first expr))
+                                 (prepare-select-filter (nth expr 2))])) ")")
     (if (map? expr)
-      (symbol (str (:table expr) "." (:name expr)))
-      expr)))
+      (make-full-field-name expr)  ;; field
+      (make-constant expr)))) ;; constant
 
 (defn- make-select-filter [expr]
   (str "where " (prepare-select-filter expr)))
 
 (defn- prepare-select-order [expr]
   (if (vector? expr)
-    (str (:name (first expr)) " " (name (or (second expr) "")))
-    (:name expr)))
+    (str (make-full-field-name (first expr)) " " (name (or (second expr) "")))
+    (make-full-field-name expr)))
 
 (defn- make-select-order [expr]
-  (str "order by " (reduce #(str %1 "," %2) (map #(prepare-select-order %) expr))))
+  (str "order by " (join-with-comma expr prepare-select-order)))
 
 (defn- make-select-fields [fields]
-  (reduce #(str %1 ", " %2) (map #(str (:table %) "." (:name %)) fields)))
+  (join-with-comma fields make-full-field-name))
 
 (defn- make-select-join [expr]
-  (reduce #(str %1 " " %2) 
-          (map (fn [x] (str "inner join " (symbol (first x)) " on " (prepare-select-filter (second x)))) expr)))
+  (join-with-space
+    (map #(join-with-space ["inner join" (symbol (first %))
+                           "on" (prepare-select-filter (second %))])
+         expr)))
+
+(defn- make-select-limit [limit]
+  (str "limit " limit))
 
 (defn make-key-from-field [field]
   (keyword (.toLowerCase (:name field))))
@@ -89,19 +111,21 @@
       (recur (dissoc row (make-field-parameter (first fields)))
              (rest fields))))
 
-(defn select [table-name & {:keys [fields where order join]}]
+(defn select [table-name & {:keys [fields where order join limit]}]
   (let [where-string (when where (make-select-filter where))
         order-string (when order (make-select-order order))
         fields-string (if fields (make-select-fields fields) (str table-name ".*"))
         join-string (when join (make-select-join join))
+        limit-string (when limit (make-select-limit limit))
         select-string (str "select " fields-string " from " table-name " "
-                           join-string " " where-string " " order-string)]
+                           join-string " " where-string " " order-string " "
+                           limit-string)]
     (jdbc/with-query-results rs [select-string]
       (vec rs))))
 
-(defn select-with-db [db table-name & {:keys [fields where order join]}]
+(defn select-with-db [db table-name & {:keys [fields where order join limit]}]
   (jdbc/with-connection db
-    (select table-name :fields fields :where where :order order :join join)))
+    (select table-name :fields fields :where where :order order :join join :limit limit)))
 
 ;;;; select deep
 
