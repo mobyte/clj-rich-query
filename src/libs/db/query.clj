@@ -27,9 +27,12 @@
                                      "in" "(" (join-with-comma (nth expr 2)
                                                 prepare-select-filter) ")"])
                :not (join-with-space ["not" (prepare-select-filter (second expr))])
-               (join-with-space [(prepare-select-filter (second expr))
-                                 (name (first expr))
-                                 (prepare-select-filter (nth expr 2))])) ")")
+               ;; (join-with-space [(prepare-select-filter (second expr))
+               ;;                   (name (first expr))
+               ;;                   (prepare-select-filter (nth expr 2))])
+               (join-with-space (interpose (name (first expr)) 
+                                           (map prepare-select-filter 
+                                                (rest expr))))) ")")
     (if (map? expr)
       (make-full-field-name expr)  ;; field
       (make-constant expr)))) ;; constant
