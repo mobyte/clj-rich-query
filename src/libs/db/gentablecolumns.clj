@@ -3,7 +3,10 @@
             [clojure.java.io :as io])
   (:use libs.db.glib))
 
-(def file-name "src/db/entities.clj")
+(def ^:dynamic file-name)
+(def file-name-default "entities.clj")
+(def nsname-default "entities")
+(def file-path "src/db/")
 (def table-prefix "table-")
 
 (defn- make-field-string [table field]
@@ -45,19 +48,25 @@
         (writeln wrtr (make-field-string lower-case-table-name column))))
     (writeln wrtr)))
 
-(defn- write-namespace-area []
+(defn- write-namespace-area [nsname]
   (with-open [wrtr (io/writer file-name)]
-    (writeln wrtr (str '(ns db.entities)))
+    (writeln wrtr (str `(ns ~(if nsname 
+                               (symbol (str "db." nsname))
+                               'db.entities))))
     (writeln wrtr)))
 
-(defn generate-table-column-names [db-spec]
+(defn generate-table-column-names [db-spec & {:keys [nsname]}]
   "Generates source file db/entities which contains table names and
 their columns info"
-  (io/make-parents (java.io.File. file-name))
-  ;; namespace area
-  (write-namespace-area)
-  (println)
-  ;; tables area
-  (doseq [table (get-tables db-spec)]
-    (write-table-area db-spec table)))
+  (binding [file-name (str file-path 
+                           (if nsname (.replace nsname "-" "_") 
+                               nsname-default) 
+                           ".clj")]
+    (io/make-parents (java.io.File. file-name))
+    ;; namespace area
+    (write-namespace-area nsname)
+    (println)
+    ;; tables area
+    (doseq [table (get-tables db-spec)]
+      (write-table-area db-spec table))))
 
